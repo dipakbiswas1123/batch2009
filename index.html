@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+    <title>PMHS Batch 2009</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body{margin:0;font-family:Arial;background:#eef2f3}
+        .container{min-height:100vh;max-width:1000px;margin:auto;background:#fff;padding:12px}
+        h2,h3{text-align:center}
+        input,select,button{width:100%;padding:12px;margin:6px 0;font-size:16px}
+        button{background:#2e86de;color:#fff;border:none;border-radius:4px}
+        .danger{background:#e74c3c}
+        .table-wrapper{overflow-x:auto}
+        table{width:100%;min-width:650px;border-collapse:collapse;margin-top:8px}
+        th,td{border:1px solid #ccc;padding:8px;text-align:center}
+        th{background:#ddd}
+        .total{text-align:center;font-weight:bold;margin-top:8px}
+        hr{margin:20px 0}
+    </style>
+</head>
+<body>
+<div class="container">
+<h2>PMHS Batch 2009 Tour Fund</h2>
+
+<h3>Add Friend</h3>
+<input id="username" placeholder="Friend Name">
+<button onclick="addUser()">Add Friend</button>
+
+<h3>Add Balance</h3>
+<select id="userSelect"></select>
+<input type="number" id="amount" placeholder="Amount">
+<button onclick="addBalance()">Add Balance</button>
+<button onclick="toggleFundLog()">Show / Hide Balance Log</button>
+
+<div class="table-wrapper">
+<table>
+<thead><tr><th>Friend</th><th>Balance</th><th>Action</th><th>Diff vs Share</th></tr></thead>
+<tbody id="userTable"></tbody>
+</table>
+</div>
+
+<div class="total">Total Fund: <span id="totalBalance">0</span></div>
+<div class="total">Per Friend Share: <span id="perPerson">0</span></div>
+
+<div id="fundLogBox" style="display:none">
+<h3>Balance Logs</h3>
+<ul id="fundLogs"></ul>
+</div>
+
+<hr>
+
+<h3>Add Expense</h3>
+<input id="expensePurpose" placeholder="Expense Purpose">
+<input type="number" id="expenseAmount" placeholder="Expense Amount">
+<button onclick="addExpense()">Add Expense</button>
+<button onclick="toggleExpenseLog()">Show / Hide Expense Log</button>
+
+<div class="table-wrapper">
+<table>
+<thead><tr><th>Purpose</th><th>Amount</th><th>Action</th></tr></thead>
+<tbody id="expenseTable"></tbody>
+</table>
+</div>
+
+<div class="total">Total Expense: <span id="totalExpense">0</span></div>
+<div class="total">Net Balance: <span id="netBalance">0</span></div>
+
+<div id="expenseLogBox" style="display:none">
+<h3>Expense Logs</h3>
+<ul id="expenseLogs"></ul>
+</div>
+</div>
+
+<script>
+const KEY="pmhs_2009_fixed_v2";
+let users=[],fundLogsArr=[],expenses=[],expenseLogsArr=[];
+
+function load(){
+  let d=localStorage.getItem(KEY);
+  if(d){d=JSON.parse(d);
+    users=d.users||[];
+    fundLogsArr=d.fundLogsArr||[];
+    expenses=d.expenses||[];
+    expenseLogsArr=d.expenseLogsArr||[];
+  }
+}
+function save(){
+  localStorage.setItem(KEY,JSON.stringify({users,fundLogsArr,expenses,expenseLogsArr}))
+}
+
+function addUser(){
+  if(!username.value.trim())return alert('Enter name');
+  users.push({name:username.value.trim(),balance:0});
+  username.value=''; save(); render();
+}
+
+function addBalance(){
+  let i=parseInt(userSelect.value);
+  let a=Number(amount.value);
+  if(a<=0)return alert('Invalid amount');
+  users[i].balance+=a;
+  fundLogsArr.push(`${new Date().toLocaleString()} : ${users[i].name} added ${a}`);
+  amount.value=''; save(); render();
+}
+
+function delUser(i){ if(!confirm('Delete friend?'))return; users.splice(i,1); save(); render(); }
+
+function addExpense(){
+  let p=expensePurpose.value.trim();
+  let a=Number(expenseAmount.value);
+  if(!p||a<=0)return alert('Invalid expense');
+  expenses.push({p,a});
+  expenseLogsArr.push(`${new Date().toLocaleString()} : Spent ${a} for ${p}`);
+  expensePurpose.value=''; expenseAmount.value=''; save(); render();
+}
+
+function delExpense(i){ expenses.splice(i,1); save(); render(); }
+
+function toggleFundLog(){
+  let box=document.getElementById('fundLogBox');
+  box.style.display = box.style.display==='none' ? 'block' : 'none';
+}
+function toggleExpenseLog(){
+  let box=document.getElementById('expenseLogBox');
+  box.style.display = box.style.display==='none' ? 'block' : 'none';
+}
+
+function render(){
+  userTable.innerHTML=''; userSelect.innerHTML='';
+  fundLogs.innerHTML=''; expenseTable.innerHTML=''; expenseLogs.innerHTML='';
+
+  let total=users.reduce((s,u)=>s+u.balance,0);
+  let share=users.length?total/users.length:0;
+  let exp=expenses.reduce((s,e)=>s+e.a,0);
+
+  users.forEach((u,i)=>{
+    userSelect.innerHTML+=`<option value='${i}'>${u.name}</option>`;
+    userTable.innerHTML+=`<tr><td>${u.name}</td><td>${u.balance}</td><td><button class='danger' onclick='delUser(${i})'>Delete</button></td><td>${(u.balance-share).toFixed(2)}</td></tr>`;
+  });
+
+  fundLogsArr.forEach(l=>{let li=document.createElement('li');li.textContent=l;fundLogs.appendChild(li);});
+  expenses.forEach((e,i)=>{expenseTable.innerHTML+=`<tr><td>${e.p}</td><td>${e.a}</td><td><button class='danger' onclick='delExpense(${i})'>Delete</button></td></tr>`});
+  expenseLogsArr.forEach(l=>{let li=document.createElement('li');li.textContent=l;expenseLogs.appendChild(li);});
+
+  totalBalance.innerText=total;
+  perPerson.innerText=share.toFixed(2);
+  totalExpense.innerText=exp;
+  netBalance.innerText=total-exp;
+}
+
+load(); render();
+</script>
+
+</body>
+</html>
